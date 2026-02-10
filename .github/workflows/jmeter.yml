@@ -10,28 +10,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout del repositorio
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # 2️⃣ Instalar JMeter
       - name: Install JMeter
         run: |
           sudo apt-get update
           sudo apt-get install -y jmeter
           jmeter -v
 
+      # 3️⃣ Ejecutar prueba JMeter (forzado + diagnóstico)
       - name: Run JMeter Test
         run: |
+          echo "📂 Directorio actual:"
           pwd
+
+          echo "📄 Archivos en el repo:"
           ls -la
+
+          echo "📁 Creando carpeta results"
           mkdir -p results
+
+          echo "🚀 Ejecutando JMeter"
           jmeter -n \
             -t ./guru99v2.jmx \
             -l ./results/results.jtl \
-            -e -o ./results/html
+            -e -o ./results/html || exit 1
+
+          echo "📦 Contenido de results:"
           ls -la results
 
-      - name: Upload results
+      # 4️⃣ Subir resultados como artifact
+      - name: Upload JMeter Results
         uses: actions/upload-artifact@v4
         with:
           name: jmeter-results
           path: results
+          if-no-files-found: error
