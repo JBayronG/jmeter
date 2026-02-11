@@ -1,0 +1,135 @@
+name: JMeter Performance Test - Stepping Thread Group
+
+on:
+  push:
+    branches: [ "master" ]
+
+  workflow_dispatch:
+    inputs:
+      users:
+        description: "Usuarios máximos concurrentes"
+        default: "500"
+
+      initial_delay:
+        description: "Delay inicial (segundos)"
+        default: "0"
+
+      start_users:
+        description: "Usuarios que suben por paso"
+        default: "40"
+
+      start_burst:
+        description: "Usuarios iniciales"
+        default: "40"
+
+      start_period:
+        description: "Periodo de subida (segundos)"
+        default: "60"
+
+      stop_users:
+        description: "Usuarios que bajan por paso"
+        default: "40"
+
+      stop_period:
+        description: "Periodo de bajada (segundos)"
+        default: "30"
+
+      flighttime:
+        description: "Tiempo sostenido total (segundos)"
+        default: "600"
+
+      rampup:
+        description: "RampUp interno (segundos)"
+        default: "10"
+
+jobs:
+
+  run-jmeter:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1️⃣ Checkout
+    - uses: actions/checkout@v4
+
+    # 2️⃣ Java
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '11'
+
+    # 3️⃣ Instalar JMeter
+    - name: Install JMeter
+      run: |
+        JMETER_VERSION=5.6.3
+        wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
+        tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
+        echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
+
+    # 4️⃣ Instalar Plugins (Stepping / Ultimate / Concurrency)
+    - name: Install JMeter Plugins
+      run: |
+        wget https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.9/jmeter-plugins-manager-1.9.jar \
+          -O $JMETER_HOME/lib/ext/jmeter-plugins-manager.jar
+
+        wget https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar \
+          -O $JMETER_HOME/lib/cmdrunner-2.3.jar
+
+        java -jar $JMETER_HOME/lib/cmdrunner-2.3.jar \
+          --tool org.jmeterplugins.repository.PluginManagerCMD \
+          install jpgc-casutg
+
+    # 5️⃣ Resolver parámetros
+    - name: Resolve parameters
+      run: |
+        echo "USERS=${{ inputs.users }}" >> $GITHUB_ENV
+        echo "INITIAL_DELAY=${{ inputs.initial_delay }}" >> $GITHUB_ENV
+        echo "START_USERS=${{ inputs.start_users }}" >> $GITHUB_ENV
+        echo "START_BURST=${{ inputs.start_burst }}" >> $GITHUB_ENV
+        echo "START_PERIOD=${{ inputs.start_period }}" >> $GITHUB_ENV
+        echo "STOP_USERS=${{ inputs.stop_users }}" >> $GITHUB_ENV
+        echo "STOP_PERIOD=${{ inputs.stop_period }}" >> $GITHUB_ENV
+        echo "FLIGHTTIME=${{ inputs.flighttime }}" >> $GITHUB_ENV
+        echo "RAMPUP=${{ inputs.rampup }}" >> $GITHUB_ENV
+
+        echo "▶ users=$USERS"
+        echo "▶ initial_delay=$INITIAL_DELAY"
+        echo "▶ start_users=$START_USERS"
+        echo "▶ start_burst=$START_BURST"
+        echo "▶ start_period=$START_PERIOD"
+        echo "▶ stop_users=$STOP_USERS"
+        echo "▶ stop_period=$STOP_PERIOD"
+        echo "▶ flighttime=$FLIGHTTIME"
+        echo "▶ rampup=$RAMPUP"
+
+    # 6️⃣ Ejecutar JMeter
+    - name: Run JMeter Test
+      run: |
+        mkdir -p results
+
+        $JMETER_HOME/bin/jmeter -n \
+          -t guru99v1.jmx \
+          -l results/results.jtl \
+          -Jusers=$USERS \
+          -Jinitial_delay=$INITIAL_DELAY \
+          -Jstart_users=$START_USERS \
+          -Jstart_burst=$START_BURST \
+          -Jstart_period=$START_PERIOD \
+          -Jstop_users=$STOP_USERS \
+          -Jstop_period=$STOP_PERIOD \
+          -Jflighttime=$FLIGHTTIME \
+          -Jrampup=$RAMPUP
+
+    # 7️⃣ Generar HTML
+    - name: Generate HTML Report
+      run: |
+        $JMETER_HOME/bin/jmeter \
+          -g results/results.jtl \
+          -o results/html
+
+    # 8️⃣ Subir resultados
+    - name: Upload results
+      uses: actions/upload-artifact@v4
+      with:
+        name: jmeter-results
+        path: results
