@@ -10,8 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install JMeter
         run: |
@@ -19,21 +18,13 @@ jobs:
           sudo apt-get install -y jmeter
           jmeter -v
 
-      - name: Verify JMX
-        run: |
-          ls -la
-          test -f guru99v2.jmx
-
-      - name: Run JMeter Test (FIXED)
+      - name: Run JMeter Test
         run: |
           mkdir -p results
           jmeter -n \
             -t guru99v2.jmx \
             -l results/results.jtl \
-            -e -o results/html \
             -Jjmeter.save.saveservice.script=true
-
-          echo "Resultados:"
           ls -R results
 
       - name: Upload results
