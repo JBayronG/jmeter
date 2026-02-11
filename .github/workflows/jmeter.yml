@@ -1,4 +1,4 @@
-name: JMeter Performance Test (HTML)
+name: JMeter Performance Test
 
 on:
   push:
@@ -10,50 +10,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    # 1️⃣ Build imagen JMeter con plugins
-    - name: Build JMeter image
-      run: docker build -t jmeter-custom .
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '11'
 
-    # 2️⃣ Ejecutar test y generar JTL
+    - name: Install JMeter
+      run: |
+        JMETER_VERSION=5.6.3
+        wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
+        tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
+        echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
+
+    # 1️⃣ Ejecutar prueba (solo JTL)
     - name: Run JMeter Test
       run: |
-        mkdir -p results html
-        docker run --rm \
-          -v ${{ github.workspace }}:/test \
-          -w /test \
-          jmeter-custom \
-          -n \
+        mkdir -p results
+        $JMETER_HOME/bin/jmeter -n \
           -t guru99v2.jmx \
           -l results/results.jtl \
           -Jjmeter.save.saveservice.script=false
 
-    # 3️⃣ Generar HTML Dashboard
+    # 2️⃣ Generar reporte HTML
     - name: Generate HTML Report
       run: |
-        docker run --rm \
-          -v ${{ github.workspace }}:/test \
-          -w /test \
-          jmeter-custom \
+        mkdir -p results/html
+        $JMETER_HOME/bin/jmeter \
           -g results/results.jtl \
-          -o html
+          -o results/html
 
-    # 4️⃣ Verificar resultados
-    - name: Verify outputs
+    # 3️⃣ Verificar resultados
+    - name: Verify results
       run: |
-        echo "Resultados:"
+        echo "Contenido de results:"
         ls -R results
-        echo "HTML:"
-        ls -R html
 
-    # 5️⃣ Subir artefactos
-    - name: Upload artifacts
+    # 4️⃣ Subir JTL + HTML
+    - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: jmeter-report
-        path: |
-          results
-          html
+        name: jmeter-results
+        path: results
