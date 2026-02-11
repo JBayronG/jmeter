@@ -4,6 +4,16 @@ on:
   push:
     branches: [ "master" ]
   workflow_dispatch:
+    inputs:
+      users:
+        description: "Usuarios concurrentes"
+        default: "50"
+      rampup:
+        description: "Ramp-up (segundos)"
+        default: "10"
+      duration:
+        description: "Duración (segundos)"
+        default: "60"
 
 jobs:
   performance-test:
@@ -25,30 +35,20 @@ jobs:
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
         echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
 
-    # 1️⃣ Ejecutar prueba (solo JTL)
     - name: Run JMeter Test
       run: |
         mkdir -p results
         $JMETER_HOME/bin/jmeter -n \
           -t guru99v2.jmx \
           -l results/results.jtl \
-          -Jjmeter.save.saveservice.script=false
+          -Jusers=${{ github.event.inputs.users || 50 }} \
+          -Jrampup=${{ github.event.inputs.rampup || 10 }} \
+          -Jduration=${{ github.event.inputs.duration || 60 }}
 
-    # 2️⃣ Generar reporte HTML
-    - name: Generate HTML Report
+    - name: Generate HTML report
       run: |
-        mkdir -p results/html
-        $JMETER_HOME/bin/jmeter \
-          -g results/results.jtl \
-          -o results/html
+        $JMETER_HOME/bin/jmeter -g results/results.jtl -o results/html
 
-    # 3️⃣ Verificar resultados
-    - name: Verify results
-      run: |
-        echo "Contenido de results:"
-        ls -R results
-
-    # 4️⃣ Subir JTL + HTML
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
