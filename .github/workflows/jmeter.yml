@@ -10,25 +10,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: Install JMeter
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jmeter
-          jmeter -v
+    # 1️⃣ Instalar Java
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '11'
 
-      - name: Run JMeter Test
-        run: |
-          mkdir -p results
-          jmeter -n \
-            -t guru99v2.jmx \
-            -l results/results.jtl \
-            -Jjmeter.save.saveservice.script=true
-          ls -R results
+    # 2️⃣ Instalar JMeter OFICIAL (no apt-get)
+    - name: Install JMeter
+      run: |
+        JMETER_VERSION=5.6.3
+        wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
+        tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
+        echo "$(pwd)/apache-jmeter-${JMETER_VERSION}/bin" >> $GITHUB_PATH
+        jmeter -v
 
-      - name: Upload results
-        uses: actions/upload-artifact@v4
-        with:
-          name: jmeter-results
-          path: results
+    # 3️⃣ Ejecutar prueba (modo seguro)
+    - name: Run JMeter Test
+      run: |
+        mkdir -p results
+        jmeter -n \
+          -t guru99v2.jmx \
+          -l results/results.jtl \
+          -Jjmeter.save.saveservice.script=false \
+          -Jjmeter.save.saveservice.assertion_results=none \
+          -Jjmeter.save.saveservice.response_data=false
+
+    # 4️⃣ Verificar resultados (debug)
+    - name: Verify results
+      run: |
+        echo "Contenido de results:"
+        ls -lh results || true
+
+    # 5️⃣ Subir artefactos (aunque el test falle)
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: jmeter-results
+        path: results
