@@ -9,15 +9,15 @@ on:
       users:
         description: "Usuarios concurrentes"
         required: false
-        default: "100"
+        default: "500"
       rampup:
         description: "Ramp-up (segundos)"
         required: false
-        default: "120"
+        default: "660"
       duration:
         description: "Duración total (segundos)"
         required: false
-        default: "600"
+        default: "1140"
 
 jobs:
   performance-test:
@@ -45,9 +45,9 @@ jobs:
     # 4. Resolver valores (push + manual)
     - name: Resolve test parameters
       run: |
-        USERS="${{ inputs.users || '100' }}"
-        RAMPUP="${{ inputs.rampup || '120' }}"
-        DURATION="${{ inputs.duration || '600' }}"
+        USERS="${{ inputs.users || '500' }}"
+        RAMPUP="${{ inputs.rampup || '660' }}"
+        DURATION="${{ inputs.duration || '1140' }}"
 
         echo "USERS=$USERS" >> $GITHUB_ENV
         echo "RAMPUP=$RAMPUP" >> $GITHUB_ENV
