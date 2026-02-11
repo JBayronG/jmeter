@@ -8,16 +8,16 @@ on:
     inputs:
       users:
         description: "Usuarios concurrentes"
-        default: "500"
+        default: "50"
       rampup:
         description: "Ramp-up (segundos)"
-        default: "660"
+        default: "120"
       hold:
         description: "Tiempo sostenido (segundos)"
-        default: "840"
+        default: "240"
       rampdown:
         description: "Ramp-down (segundos)"
-        default: "480"
+        default: "180"
 
 jobs:
 
@@ -61,10 +61,10 @@ jobs:
     # 5️⃣ Resolver parámetros
     - name: Resolve parameters
       run: |
-        echo "USERS=${{ inputs.users || '500' }}" >> $GITHUB_ENV
-        echo "RAMPUP=${{ inputs.rampup || '660' }}" >> $GITHUB_ENV
-        echo "HOLD=${{ inputs.hold || '840' }}" >> $GITHUB_ENV
-        echo "RAMPDOWN=${{ inputs.rampdown || '480' }}" >> $GITHUB_ENV
+        echo "USERS=${{ inputs.users || '50' }}" >> $GITHUB_ENV
+        echo "RAMPUP=${{ inputs.rampup || '120' }}" >> $GITHUB_ENV
+        echo "HOLD=${{ inputs.hold || '240' }}" >> $GITHUB_ENV
+        echo "RAMPDOWN=${{ inputs.rampdown || '180' }}" >> $GITHUB_ENV
 
         echo "Usuarios=$USERS"
         echo "RampUp=$RAMPUP"
@@ -94,7 +94,7 @@ jobs:
   # =========================
   # JOB 2 - Generar HTML
   # =========================
-  generate-report:
+    generate-report:
     runs-on: ubuntu-latest
     needs: run-jmeter
 
@@ -111,6 +111,18 @@ jobs:
         wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
         echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
+
+    - name: Install JMeter Plugins (Concurrency Thread Group)
+      run: |
+        wget https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.9/jmeter-plugins-manager-1.9.jar \
+          -O $JMETER_HOME/lib/ext/jmeter-plugins-manager.jar
+
+        wget https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar \
+          -O $JMETER_HOME/lib/cmdrunner-2.3.jar
+
+        java -jar $JMETER_HOME/lib/cmdrunner-2.3.jar \
+          --tool org.jmeterplugins.repository.PluginManagerCMD \
+          install jpgc-casutg
 
     - name: Download JTL
       uses: actions/download-artifact@v4
