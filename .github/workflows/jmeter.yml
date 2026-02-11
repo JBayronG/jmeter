@@ -1,10 +1,8 @@
 name: JMeter Performance Test
 
-push:
-    branches: [ "master" ]
-
-
 on:
+  push:
+    branches: [ "master" ]
   workflow_dispatch:
     inputs:
       users:
@@ -25,17 +23,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Descargar el repo
+    # 1. Checkout del repositorio
     - uses: actions/checkout@v4
 
-    # 2. Instalar Java
+    # 2. Instalar Java (JMeter 5.6.x usa Java 11 estable)
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: '11'
 
-    # 3. Instalar JMeter
+    # 3. Descargar e instalar JMeter
     - name: Install JMeter
       run: |
         JMETER_VERSION=5.6.3
@@ -43,10 +41,11 @@ jobs:
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
         echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
 
-    # 4. Ejecutar prueba de performance
+    # 4. Ejecutar prueba no-GUI con parámetros CI
     - name: Run JMeter Test
       run: |
         mkdir -p results
+
         echo "Users=${{ inputs.users }}"
         echo "Rampup=${{ inputs.rampup }}"
         echo "Duration=${{ inputs.duration }}"
@@ -58,14 +57,14 @@ jobs:
           -Jrampup=${{ inputs.rampup }} \
           -Jduration=${{ inputs.duration }}
 
-    # 5. Generar reporte HTML
+    # 5. Generar reporte HTML (solo funciona si hay samples)
     - name: Generate HTML report
       run: |
         $JMETER_HOME/bin/jmeter \
           -g results/results.jtl \
           -o results/html
 
-    # 6. Subir resultados
+    # 6. Publicar resultados
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
