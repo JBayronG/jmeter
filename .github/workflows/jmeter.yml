@@ -3,19 +3,20 @@ name: JMeter Performance Test
 on:
   push:
     branches: [ "master" ]
+
   workflow_dispatch:
     inputs:
       users:
         description: "Usuarios concurrentes"
-        required: true
+        required: false
         default: "100"
       rampup:
         description: "Ramp-up (segundos)"
-        required: true
+        required: false
         default: "120"
       duration:
         description: "Duración total (segundos)"
-        required: true
+        required: false
         default: "600"
 
 jobs:
@@ -23,17 +24,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout del repositorio
+    # 1. Checkout
     - uses: actions/checkout@v4
 
-    # 2. Instalar Java (JMeter 5.6.x usa Java 11 estable)
+    # 2. Java
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: '11'
 
-    # 3. Descargar e instalar JMeter
+    # 3. Instalar JMeter
     - name: Install JMeter
       run: |
         JMETER_VERSION=5.6.3
@@ -41,30 +42,41 @@ jobs:
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
         echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
 
-    # 4. Ejecutar prueba no-GUI con parámetros CI
+    # 4. Resolver valores (push + manual)
+    - name: Resolve test parameters
+      run: |
+        USERS="${{ inputs.users || '100' }}"
+        RAMPUP="${{ inputs.rampup || '120' }}"
+        DURATION="${{ inputs.duration || '600' }}"
+
+        echo "USERS=$USERS" >> $GITHUB_ENV
+        echo "RAMPUP=$RAMPUP" >> $GITHUB_ENV
+        echo "DURATION=$DURATION" >> $GITHUB_ENV
+
+        echo "Usuarios=$USERS"
+        echo "Rampup=$RAMPUP"
+        echo "Duration=$DURATION"
+
+    # 5. Ejecutar JMeter
     - name: Run JMeter Test
       run: |
         mkdir -p results
 
-        echo "Users=${{ inputs.users }}"
-        echo "Rampup=${{ inputs.rampup }}"
-        echo "Duration=${{ inputs.duration }}"
-
         $JMETER_HOME/bin/jmeter -n \
           -t guru99v2.jmx \
           -l results/results.jtl \
-          -Jusers=${{ inputs.users }} \
-          -Jrampup=${{ inputs.rampup }} \
-          -Jduration=${{ inputs.duration }}
+          -Jusers=$USERS \
+          -Jrampup=$RAMPUP \
+          -Jduration=$DURATION
 
-    # 5. Generar reporte HTML (solo funciona si hay samples)
+    # 6. Generar HTML
     - name: Generate HTML report
       run: |
         $JMETER_HOME/bin/jmeter \
           -g results/results.jtl \
           -o results/html
 
-    # 6. Publicar resultados
+    # 7. Subir artefactos
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
