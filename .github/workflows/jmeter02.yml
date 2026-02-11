@@ -1,4 +1,4 @@
-name: JMeter Performance Test - Stepping Thread Group
+name: JMeter Performance Test
 
 on:
   push:
@@ -7,58 +7,47 @@ on:
   workflow_dispatch:
     inputs:
       users:
-        description: "Usuarios máximos concurrentes"
+        description: "Usuarios concurrentes"
         default: "500"
-
       initial_delay:
-        description: "Delay inicial (segundos)"
+        description: "Delay inicial (seg)"
         default: "0"
-
       start_users:
-        description: "Usuarios que suben por paso"
+        description: "Usuarios por escalón"
         default: "40"
-
       start_burst:
-        description: "Usuarios iniciales"
+        description: "Usuarios por burst"
         default: "40"
-
       start_period:
-        description: "Periodo de subida (segundos)"
+        description: "Periodo subida (seg)"
         default: "60"
-
       stop_users:
-        description: "Usuarios que bajan por paso"
+        description: "Usuarios a bajar por paso"
         default: "40"
-
       stop_period:
-        description: "Periodo de bajada (segundos)"
+        description: "Periodo bajada (seg)"
         default: "30"
-
       flighttime:
-        description: "Tiempo sostenido total (segundos)"
+        description: "Tiempo total activo (seg)"
         default: "600"
-
       rampup:
-        description: "RampUp interno (segundos)"
+        description: "RampUp interno (seg)"
         default: "10"
 
 jobs:
-
   run-jmeter:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-    # 2️⃣ Java
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: '11'
 
-    # 3️⃣ Instalar JMeter
     - name: Install JMeter
       run: |
         JMETER_VERSION=5.6.3
@@ -66,43 +55,29 @@ jobs:
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
         echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
 
-    # 4️⃣ Instalar Plugins (Stepping / Ultimate / Concurrency)
-    - name: Install JMeter Plugins
-      run: |
-        wget https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.9/jmeter-plugins-manager-1.9.jar \
-          -O $JMETER_HOME/lib/ext/jmeter-plugins-manager.jar
-
-        wget https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar \
-          -O $JMETER_HOME/lib/cmdrunner-2.3.jar
-
-        java -jar $JMETER_HOME/lib/cmdrunner-2.3.jar \
-          --tool org.jmeterplugins.repository.PluginManagerCMD \
-          install jpgc-casutg
-
-    # 5️⃣ Resolver parámetros
+    # 🔹 PASO CLAVE
     - name: Resolve parameters
       run: |
-        echo "USERS=${{ inputs.users }}" >> $GITHUB_ENV
-        echo "INITIAL_DELAY=${{ inputs.initial_delay }}" >> $GITHUB_ENV
-        echo "START_USERS=${{ inputs.start_users }}" >> $GITHUB_ENV
-        echo "START_BURST=${{ inputs.start_burst }}" >> $GITHUB_ENV
-        echo "START_PERIOD=${{ inputs.start_period }}" >> $GITHUB_ENV
-        echo "STOP_USERS=${{ inputs.stop_users }}" >> $GITHUB_ENV
-        echo "STOP_PERIOD=${{ inputs.stop_period }}" >> $GITHUB_ENV
-        echo "FLIGHTTIME=${{ inputs.flighttime }}" >> $GITHUB_ENV
-        echo "RAMPUP=${{ inputs.rampup }}" >> $GITHUB_ENV
+        echo "USERS=${{ inputs.users || '500' }}" >> $GITHUB_ENV
+        echo "INITIAL_DELAY=${{ inputs.initial_delay || '0' }}" >> $GITHUB_ENV
+        echo "START_USERS=${{ inputs.start_users || '40' }}" >> $GITHUB_ENV
+        echo "START_BURST=${{ inputs.start_burst || '40' }}" >> $GITHUB_ENV
+        echo "START_PERIOD=${{ inputs.start_period || '60' }}" >> $GITHUB_ENV
+        echo "STOP_USERS=${{ inputs.stop_users || '40' }}" >> $GITHUB_ENV
+        echo "STOP_PERIOD=${{ inputs.stop_period || '30' }}" >> $GITHUB_ENV
+        echo "FLIGHTTIME=${{ inputs.flighttime || '600' }}" >> $GITHUB_ENV
+        echo "RAMPUP=${{ inputs.rampup || '10' }}" >> $GITHUB_ENV
 
-        echo "▶ users=$USERS"
-        echo "▶ initial_delay=$INITIAL_DELAY"
-        echo "▶ start_users=$START_USERS"
-        echo "▶ start_burst=$START_BURST"
-        echo "▶ start_period=$START_PERIOD"
-        echo "▶ stop_users=$STOP_USERS"
-        echo "▶ stop_period=$STOP_PERIOD"
-        echo "▶ flighttime=$FLIGHTTIME"
-        echo "▶ rampup=$RAMPUP"
+        echo "Usuarios=$USERS"
+        echo "InitialDelay=$INITIAL_DELAY"
+        echo "StartUsers=$START_USERS"
+        echo "StartBurst=$START_BURST"
+        echo "StartPeriod=$START_PERIOD"
+        echo "StopUsers=$STOP_USERS"
+        echo "StopPeriod=$STOP_PERIOD"
+        echo "FlightTime=$FLIGHTTIME"
+        echo "RampUp=$RAMPUP"
 
-    # 6️⃣ Ejecutar JMeter
     - name: Run JMeter Test
       run: |
         mkdir -p results
@@ -120,14 +95,12 @@ jobs:
           -Jflighttime=$FLIGHTTIME \
           -Jrampup=$RAMPUP
 
-    # 7️⃣ Generar HTML
-    - name: Generate HTML Report
+    - name: Generate HTML report
       run: |
         $JMETER_HOME/bin/jmeter \
           -g results/results.jtl \
           -o results/html
 
-    # 8️⃣ Subir resultados
     - name: Upload results
       uses: actions/upload-artifact@v4
       with:
