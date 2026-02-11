@@ -1,5 +1,9 @@
 name: JMeter Performance Test
 
+push:
+    branches: [ "master" ]
+
+
 on:
   workflow_dispatch:
     inputs:
