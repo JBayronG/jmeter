@@ -1,4 +1,4 @@
-name: JMeter Performance Test
+name: JMeter Performance Test (HTML)
 
 on:
   push:
@@ -10,35 +10,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: '11'
+    # 1️⃣ Build imagen JMeter con plugins
+    - name: Build JMeter image
+      run: docker build -t jmeter-custom .
 
-    - name: Install JMeter
-      run: |
-        JMETER_VERSION=5.6.3
-        wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
-        tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
-        echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
-
+    # 2️⃣ Ejecutar test y generar JTL
     - name: Run JMeter Test
       run: |
-        mkdir -p results
-        $JMETER_HOME/bin/jmeter -n \
+        mkdir -p results html
+        docker run --rm \
+          -v ${{ github.workspace }}:/test \
+          -w /test \
+          jmeter-custom \
+          -n \
           -t guru99v2.jmx \
           -l results/results.jtl \
           -Jjmeter.save.saveservice.script=false
 
-    - name: Verify results
-      run: ls -lh results || true
+    # 3️⃣ Generar HTML Dashboard
+    - name: Generate HTML Report
+      run: |
+        docker run --rm \
+          -v ${{ github.workspace }}:/test \
+          -w /test \
+          jmeter-custom \
+          -g results/results.jtl \
+          -o html
 
-    - name: Upload results
+    # 4️⃣ Verificar resultados
+    - name: Verify outputs
+      run: |
+        echo "Resultados:"
+        ls -R results
+        echo "HTML:"
+        ls -R html
+
+    # 5️⃣ Subir artefactos
+    - name: Upload artifacts
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: jmeter-results
-        path: results
+        name: jmeter-report
+        path: |
+          results
+          html
