@@ -49,14 +49,14 @@ jobs:
     # 4️⃣ Instalar Plugins (CLAVE)
     - name: Install JMeter Plugins
       run: |
-        wget https://jmeter-plugins.org/get/PluginsManager.jar \
-          -O $JMETER_HOME/lib/ext/PluginsManager.jar
+        wget https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.10/jmeter-plugins-manager-1.10.jar \
+          -O $JMETER_HOME/lib/ext/jmeter-plugins-manager.jar
 
-        wget https://jmeter-plugins.org/get/cmdrunner-2.3.jar \
+        wget https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar \
           -O $JMETER_HOME/lib/cmdrunner-2.3.jar
 
-        java -cp $JMETER_HOME/lib/ext/PluginsManager.jar org.jmeterplugins.repository.PluginManagerCMD install \
-          jpgc-casutg
+        java -cp "$JMETER_HOME/lib/ext/jmeter-plugins-manager.jar" \
+           org.jmeterplugins.repository.PluginManagerCMD install jpgc-casutg
 
     # 5️⃣ Resolver parámetros
     - name: Resolve parameters
