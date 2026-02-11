@@ -10,43 +10,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    # 1️⃣ Instalar Java
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: '11'
 
-    # 2️⃣ Instalar JMeter OFICIAL (no apt-get)
     - name: Install JMeter
       run: |
         JMETER_VERSION=5.6.3
         wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
-        echo "$(pwd)/apache-jmeter-${JMETER_VERSION}/bin" >> $GITHUB_PATH
-        jmeter -v
+        echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
 
-    # 3️⃣ Ejecutar prueba (modo seguro)
     - name: Run JMeter Test
       run: |
         mkdir -p results
-        jmeter -n \
+        $JMETER_HOME/bin/jmeter -n \
           -t guru99v2.jmx \
           -l results/results.jtl \
-          -Jjmeter.save.saveservice.script=false \
-          -Jjmeter.save.saveservice.assertion_results=none \
-          -Jjmeter.save.saveservice.response_data=false
+          -Jjmeter.save.saveservice.script=false
 
-    # 4️⃣ Verificar resultados (debug)
     - name: Verify results
-      run: |
-        echo "Contenido de results:"
-        ls -lh results || true
+      run: ls -lh results || true
 
-    # 5️⃣ Subir artefactos (aunque el test falle)
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
