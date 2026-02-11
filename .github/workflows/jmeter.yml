@@ -7,13 +7,13 @@ on:
     inputs:
       users:
         description: "Usuarios concurrentes"
-        default: "50"
+        default: "100"
       rampup:
         description: "Ramp-up (segundos)"
         default: "10"
       duration:
         description: "Duración (segundos)"
-        default: "60"
+        default: "180"
 
 jobs:
   performance-test:
@@ -41,9 +41,9 @@ jobs:
         $JMETER_HOME/bin/jmeter -n \
           -t guru99v2.jmx \
           -l results/results.jtl \
-          -Jusers=${{ github.event.inputs.users || 50 }} \
+          -Jusers=${{ github.event.inputs.users || 100 }} \
           -Jrampup=${{ github.event.inputs.rampup || 10 }} \
-          -Jduration=${{ github.event.inputs.duration || 60 }}
+          -Jduration=${{ github.event.inputs.duration || 180 }}
 
     - name: Generate HTML report
       run: |
