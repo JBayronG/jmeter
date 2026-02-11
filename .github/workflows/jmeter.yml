@@ -1,4 +1,4 @@
-name: JMeter Performance Test
+name: JMeter Performance Test (Docker)
 
 on:
   push:
@@ -10,61 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    # 2️⃣ Java (requerido por JMeter)
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: '11'
-
-    # 3️⃣ Instalar JMeter OFICIAL
-    - name: Install JMeter
-      run: |
-        JMETER_VERSION=5.6.3
-        wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
-        tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
-        echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
-
-    # 4️⃣ Instalar Plugins Manager + Custom Thread Groups
-    - name: Install JMeter Plugins
-      run: |
-        # Plugins Manager
-        wget https://jmeter-plugins.org/get/ -O $JMETER_HOME/lib/ext/jmeter-plugins-manager.jar
-
-        # CMD Runner (CORRECTO)
-        wget https://jmeter-plugins.org/get/cmdrunner-2.3.jar -O $JMETER_HOME/lib/cmdrunner-2.3.jar
-
-        # Instalar comando PluginsManagerCMD.sh
-        java -cp $JMETER_HOME/lib/ext/jmeter-plugins-manager.jar:$JMETER_HOME/lib/cmdrunner-2.3.jar \
-          org.jmeterplugins.repository.PluginManagerCMDInstaller
-
-        chmod +x $JMETER_HOME/bin/PluginsManagerCMD.sh
-
-        # Plugin requerido por tu JMX (SteppingThreadGroup)
-        $JMETER_HOME/bin/PluginsManagerCMD.sh install jpgc-casutg
-
-    # 5️⃣ Ejecutar prueba JMeter (modo seguro)
-    - name: Run JMeter Test
+    - name: Run JMeter with Docker
       run: |
         mkdir -p results
-        $JMETER_HOME/bin/jmeter -n \
+
+        docker run --rm \
+          -v ${{ github.workspace }}:/test \
+          -w /test \
+          justb4/jmeter:5.6.3 \
+          -n \
           -t guru99v2.jmx \
           -l results/results.jtl \
-          -Jjmeter.save.saveservice.script=false \
-          -Jjmeter.save.saveservice.response_data=false \
-          -Jjmeter.save.saveservice.assertion_results=none
+          -Jjmeter.save.saveservice.script=false
 
-    # 6️⃣ Verificar resultados
     - name: Verify results
       run: |
         echo "Contenido de results:"
         ls -lh results || true
 
-    # 7️⃣ Subir resultados como artefacto
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
