@@ -18,6 +18,7 @@ jobs:
         distribution: temurin
         java-version: '11'
 
+    # 1️⃣ Instalar JMeter oficial
     - name: Install JMeter
       run: |
         JMETER_VERSION=5.6.3
@@ -25,6 +26,17 @@ jobs:
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
         echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
 
+    # 2️⃣ Instalar Plugins Manager
+    - name: Install JMeter Plugins
+      run: |
+        wget https://jmeter-plugins.org/get/ -O $JMETER_HOME/lib/ext/jmeter-plugins-manager.jar
+        wget https://jmeter-plugins.org/get/JMeterPluginsCMD.sh -O $JMETER_HOME/bin/PluginsManagerCMD.sh
+        chmod +x $JMETER_HOME/bin/PluginsManagerCMD.sh
+
+        # Instalar Thread Groups (SteppingThreadGroup)
+        $JMETER_HOME/bin/PluginsManagerCMD.sh install jpgc-casutg
+
+    # 3️⃣ Ejecutar prueba
     - name: Run JMeter Test
       run: |
         mkdir -p results
@@ -33,9 +45,11 @@ jobs:
           -l results/results.jtl \
           -Jjmeter.save.saveservice.script=false
 
+    # 4️⃣ Verificar resultados
     - name: Verify results
       run: ls -lh results || true
 
+    # 5️⃣ Subir resultados
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
