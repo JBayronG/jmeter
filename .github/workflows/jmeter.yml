@@ -3,31 +3,40 @@ name: JMeter Performance Test
 on:
   push:
     branches: [ "master" ]
+
   workflow_dispatch:
     inputs:
       users:
         description: "Usuarios concurrentes"
+        required: true
         default: "100"
+
       rampup:
-        description: "Ramp-up (segundos)"
-        default: "10"
+        description: "Ramp-up en segundos (2 min = 120)"
+        required: true
+        default: "120"
+
       duration:
-        description: "Duración (segundos)"
-        default: "180"
+        description: "Duración total en segundos (10 min = 600)"
+        required: true
+        default: "600"
 
 jobs:
   performance-test:
     runs-on: ubuntu-latest
 
     steps:
+    # 1. Clona el repo
     - uses: actions/checkout@v4
 
+    # 2. Instala Java (requerido por JMeter)
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: '11'
 
+    # 3. Descarga JMeter
     - name: Install JMeter
       run: |
         JMETER_VERSION=5.6.3
@@ -35,20 +44,25 @@ jobs:
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
         echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
 
+    # 4. Ejecuta la prueba pasando SOLO parámetros desde CI
     - name: Run JMeter Test
       run: |
         mkdir -p results
         $JMETER_HOME/bin/jmeter -n \
           -t guru99v2.jmx \
           -l results/results.jtl \
-          -Jusers=${{ github.event.inputs.users || 100 }} \
-          -Jrampup=${{ github.event.inputs.rampup || 10 }} \
-          -Jduration=${{ github.event.inputs.duration || 180 }}
+          -Jusers=${{ github.event.inputs.users }} \
+          -Jrampup=${{ github.event.inputs.rampup }} \
+          -Jduration=${{ github.event.inputs.duration }}
 
+    # 5. Genera reporte HTML
     - name: Generate HTML report
       run: |
-        $JMETER_HOME/bin/jmeter -g results/results.jtl -o results/html
+        $JMETER_HOME/bin/jmeter \
+          -g results/results.jtl \
+          -o results/html
 
+    # 6. Publica resultados como artefacto
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
