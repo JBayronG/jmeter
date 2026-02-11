@@ -1,8 +1,10 @@
 name: JMeter Performance Test
 
-on:
-  push:
+push:
     branches: [ "master" ]
+
+
+on:
   workflow_dispatch:
     inputs:
       users:
@@ -10,11 +12,11 @@ on:
         required: true
         default: "100"
       rampup:
-        description: "Ramp-up (segundos)"
+        description: "Ramp-up en segundos"
         required: true
         default: "120"
       duration:
-        description: "Duración total (segundos)"
+        description: "Duración total en segundos"
         required: true
         default: "600"
 
@@ -23,17 +25,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout del repositorio
+    # 1. Descargar el repo
     - uses: actions/checkout@v4
 
-    # 2. Instalar Java (JMeter 5.6.x usa Java 11 estable)
+    # 2. Instalar Java
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: '11'
 
-    # 3. Descargar e instalar JMeter
+    # 3. Instalar JMeter
     - name: Install JMeter
       run: |
         JMETER_VERSION=5.6.3
@@ -41,11 +43,10 @@ jobs:
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
         echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
 
-    # 4. Ejecutar prueba no-GUI con parámetros CI
+    # 4. Ejecutar prueba de performance
     - name: Run JMeter Test
       run: |
         mkdir -p results
-
         echo "Users=${{ inputs.users }}"
         echo "Rampup=${{ inputs.rampup }}"
         echo "Duration=${{ inputs.duration }}"
@@ -53,18 +54,18 @@ jobs:
         $JMETER_HOME/bin/jmeter -n \
           -t guru99v2.jmx \
           -l results/results.jtl \
-          -Jusers=${{ inputs.users }} \
-          -Jrampup=${{ inputs.rampup }} \
-          -Jduration=${{ inputs.duration }}
+          -Jusers=${{ github.event.inputs.users || 100 }} \
+          -Jrampup=${{ github.event.inputs.rampup || 120 }} \
+          -Jduration=${{ github.event.inputs.duration || 600 }}
 
-    # 5. Generar reporte HTML (solo funciona si hay samples)
+    # 5. Generar reporte HTML
     - name: Generate HTML report
       run: |
         $JMETER_HOME/bin/jmeter \
           -g results/results.jtl \
           -o results/html
 
-    # 6. Publicar resultados
+    # 6. Subir resultados
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
