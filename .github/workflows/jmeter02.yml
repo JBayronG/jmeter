@@ -108,7 +108,7 @@ jobs:
         mkdir -p results
 
         $JMETER_HOME/bin/jmeter -n \
-          -t guru99v1.jmx \
+          -t guru99v3.jmx \
           -l results/results.jtl \
           -Jusers=$USERS \
           -Jinitial_delay=$INITIAL_DELAY \
