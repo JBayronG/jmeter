@@ -55,6 +55,20 @@ jobs:
         tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
         echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
 
+     #  Instalar JMeter Plugins (Stepping Thread Group)
+    - name: Install JMeter Plugins (Stepping Thread Group)
+      run: |
+        wget https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.9/jmeter-plugins-manager-1.9.jar \
+          -O $JMETER_HOME/lib/ext/jmeter-plugins-manager.jar
+
+        wget https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar \
+          -O $JMETER_HOME/lib/cmdrunner-2.3.jar
+
+        java -jar $JMETER_HOME/lib/cmdrunner-2.3.jar \
+          --tool org.jmeterplugins.repository.PluginManagerCMD \
+          install jpgc-casutg
+
+
     # 🔹 PASO CLAVE
     - name: Resolve parameters
       run: |
