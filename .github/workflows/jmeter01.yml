@@ -1,0 +1,91 @@
+name: JMeter Performance Test
+
+on:
+  push:
+    branches: [ "master" ]
+
+  workflow_dispatch:
+    inputs:
+      users:
+        description: "Usuarios concurrentes"
+        required: false
+        default: "500"
+      rampup:
+        description: "Ramp-up (segundos)"
+        required: false
+        default: "660"   # 11 minutos
+      hold:
+        description: "Tiempo sostenido (segundos)"
+        required: false
+        default: "840"   # 14 minutos
+      rampdown:
+        description: "Ramp-down (segundos)"
+        required: false
+        default: "480"   # 8 minutos
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+
+    # 🔑 AQUÍ ESTÁ LA CLAVE
+    # Estos valores funcionan tanto para push como para manual
+    env:
+      USERS: ${{ inputs.users || '500' }}
+      RAMPUP: ${{ inputs.rampup || '660' }}
+      HOLD: ${{ inputs.hold || '840' }}
+      RAMPDOWN: ${{ inputs.rampdown || '480' }}
+
+    steps:
+    # 1. Checkout del repo
+    - uses: actions/checkout@v4
+
+    # 2. Java
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '11'
+
+    # 3. Instalar JMeter
+    - name: Install JMeter
+      run: |
+        JMETER_VERSION=5.6.3
+        wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
+        tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
+        echo "JMETER_HOME=$(pwd)/apache-jmeter-${JMETER_VERSION}" >> $GITHUB_ENV
+
+    # 4. Log de parámetros (debug)
+    - name: Show test parameters
+      run: |
+        echo "Usuarios=$USERS"
+        echo "Ramp-up=$RAMPUP segundos"
+        echo "Hold=$HOLD segundos"
+        echo "Ramp-down=$RAMPDOWN segundos"
+
+    # 5. Ejecutar JMeter
+    - name: Run JMeter Test
+      run: |
+        mkdir -p results
+
+        $JMETER_HOME/bin/jmeter -n \
+          -t guru99v2.jmx \
+          -l results/results.jtl \
+          -Jusers=$USERS \
+          -Jrampup=$RAMPUP \
+          -Jhold=$HOLD \
+          -Jrampdown=$RAMPDOWN
+
+    # 6. Generar reporte HTML
+    - name: Generate HTML report
+      run: |
+        $JMETER_HOME/bin/jmeter \
+          -g results/results.jtl \
+          -o results/html
+
+    # 7. Subir artefactos
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: jmeter-results
+        path: results
