@@ -10,38 +10,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    - name: Install JMeter
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y jmeter
-        jmeter -v
+      - name: Install JMeter
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jmeter
+          jmeter -v
 
-    - name: Verify JMX exists
-      run: |
-        ls -l
-        test -f guru99v2.jmx
+      - name: Verify JMX
+        run: |
+          ls -la
+          test -f guru99v2.jmx
 
-    - name: Run JMeter Test
-      run: |
-        mkdir -p results
-        jmeter -n \
-          -t guru99v2.jmx \
-          -l results/results.jtl
+      - name: Run JMeter Test (FIXED)
+        run: |
+          mkdir -p results
+          jmeter -n \
+            -t guru99v2.jmx \
+            -l results/results.jtl \
+            -e -o results/html \
+            -Jjmeter.save.saveservice.script=true
 
-    - name: Generate HTML Report
-      run: |
-        jmeter -g results/results.jtl -o results/html
+          echo "Resultados:"
+          ls -R results
 
-    - name: List results (debug)
-      run: |
-        echo "Contenido de results:"
-        ls -R results
-
-    - name: Upload results
-      uses: actions/upload-artifact@v4
-      with:
-        name: jmeter-results
-        path: results
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-results
+          path: results
